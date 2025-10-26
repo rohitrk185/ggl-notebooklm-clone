@@ -60,6 +60,7 @@ export default function FileUpload({ onUploadSuccess }: Props) {
     } catch (error) {
       console.error("Error uploading file:", error);
       toast.error(
+        // @ts-expect-error: Unknown type of error
         error.response?.data?.details || "Upload failed. Please try again."
       );
     } finally {
