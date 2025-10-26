@@ -258,13 +258,13 @@ export default function Chat({ documentId, onCitationClick }: Props) {
   };
 
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader>
-        <CardTitle>Chat Assistant</CardTitle>
+    <Card className="flex flex-col h-full bg-white border-gray-200">
+      <CardHeader className="border-b border-gray-200">
+        <CardTitle className="text-gray-900">Chat Assistant</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden">
+      <CardContent className="flex-1 overflow-hidden bg-gray-50">
         <ScrollArea className="h-full pr-4">
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -274,17 +274,22 @@ export default function Chat({ documentId, onCitationClick }: Props) {
                 )}
               >
                 {msg.sender === "bot" && (
-                  <span className="bg-gray-700 p-2 rounded-full">
-                    <Bot size={16} />
-                  </span>
+                  <div className="bg-gray-900 p-2 rounded-full shrink-0">
+                    <Bot size={16} className="text-white" />
+                  </div>
                 )}
                 <div
                   className={cn(
-                    "p-3 rounded-lg max-w-xs md:max-w-md",
-                    msg.sender === "user" ? "bg-blue-600" : "bg-gray-800"
+                    "p-4 rounded-lg max-w-xs md:max-w-md shadow-sm",
+                    msg.sender === "user" 
+                      ? "bg-gray-900 text-white" 
+                      : "bg-white border border-gray-200 text-gray-900"
                   )}
                 >
-                  <div className="text-sm text-gray-100">
+                  <div className={cn(
+                    "text-sm leading-relaxed",
+                    msg.sender === "user" ? "text-white" : "text-gray-900"
+                  )}>
                     <FormattedMessage text={msg.text} />
                     {msg.isStreaming && (
                       <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse" />
@@ -293,14 +298,14 @@ export default function Chat({ documentId, onCitationClick }: Props) {
                   {msg.sender === "bot" &&
                     msg.citations &&
                     msg.citations.length > 0 && (
-                      <div className="mt-2 space-x-2">
-                        <span className="text-xs text-gray-400">Sources:</span>
+                      <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+                        <span className="text-xs text-gray-500 font-medium">Sources:</span>
                         {msg.citations.map((page, i) => (
                           <Button
                             key={i}
-                            variant="secondary"
+                            variant="outline"
                             size="sm"
-                            className="h-6 px-2 text-xs"
+                            className="h-6 px-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300"
                             onClick={() => onCitationClick(page)}
                           >
                             Page {page}
@@ -310,19 +315,19 @@ export default function Chat({ documentId, onCitationClick }: Props) {
                     )}
                 </div>
                 {msg.sender === "user" && (
-                  <span className="bg-blue-600 p-2 rounded-full">
-                    <User size={16} />
-                  </span>
+                  <div className="bg-gray-900 p-2 rounded-full shrink-0">
+                    <User size={16} className="text-white" />
+                  </div>
                 )}
               </div>
             ))}
             {isLoading && !messages.some(msg => msg.isStreaming) && (
               <div className="flex items-start gap-3">
-                <span className="bg-gray-700 p-2 rounded-full">
-                  <Bot size={16} />
-                </span>
-                <div className="p-3 rounded-lg bg-gray-800">
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                <div className="bg-gray-900 p-2 rounded-full shrink-0">
+                  <Bot size={16} className="text-white" />
+                </div>
+                <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm">
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
                 </div>
               </div>
             )}
@@ -330,7 +335,7 @@ export default function Chat({ documentId, onCitationClick }: Props) {
           </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="border-t border-gray-200 bg-white">
         <form onSubmit={handleSubmit} className="flex w-full space-x-2">
           <Input
             value={input}
@@ -343,8 +348,14 @@ export default function Chat({ documentId, onCitationClick }: Props) {
             }}
             placeholder="Ask a question about your PDF..."
             disabled={isLoading}
+            className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-gray-900"
           />
-          <Button type="submit" disabled={isLoading} size="icon">
+          <Button 
+            type="submit" 
+            disabled={isLoading} 
+            size="icon"
+            className="bg-gray-900 hover:bg-gray-800 text-white"
+          >
             <Send size={16} />
           </Button>
         </form>
