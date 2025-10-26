@@ -22,6 +22,23 @@ export interface ErrorResponseBody {
   timestamp?: string;
 }
 
+// Streaming types
+export interface StreamChunkResponse {
+  type: "chunk";
+  text: string;
+}
+
+export interface StreamDoneResponse {
+  type: "done";
+  citations: number[];
+}
+
+export interface StreamErrorResponse {
+  type: "error";
+  error: string;
+  details?: string;
+}
+
 // Validation types
 export interface ValidationResult {
   valid: boolean;

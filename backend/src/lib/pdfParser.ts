@@ -17,10 +17,32 @@ export async function parsePdf(filePath: string): Promise<PdfChunk[]> {
       throw new Error("LlamaParse failed to return any documents.");
     }
 
-    return documents.map((doc) => ({
-      text: doc.text,
-      pageNumber: parseInt(doc.metadata?.page_label, 10) || 0,
-    }));
+    return documents.map((doc, index) => {
+      // Try multiple possible metadata fields for page number
+      let pageNumber = index + 1; // Default to index-based (1-indexed)
+      
+      if (doc.metadata) {
+        // Try different common field names
+        const possiblePageNumber = 
+          doc.metadata.page_number || 
+          doc.metadata.page || 
+          doc.metadata.page_label;
+        
+        if (possiblePageNumber) {
+          const parsed = parseInt(possiblePageNumber, 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            pageNumber = parsed;
+          }
+        }
+      }
+
+      console.log(`Parsed chunk ${index}: page ${pageNumber}, text length: ${doc.text?.length || 0}`);
+
+      return {
+        text: doc.text,
+        pageNumber: pageNumber,
+      };
+    });
   } catch (error) {
     console.error("Error parsing PDF with LlamaParse:", error);
     throw new Error("Failed to parse the PDF file.");
