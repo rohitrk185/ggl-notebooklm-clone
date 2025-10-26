@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { geminiProModel, geminiFlashModel } from "../config/gemini";
 import { pineconeIndex } from "../config/pinecone";
 import { embedQuery } from "../services/embeddingService";
+import { generateChatPrompt } from "../prompts/chatPrompt";
 import { 
   ChatRequestBody, 
   ChatResponseBody, 
@@ -10,6 +11,22 @@ import {
   StreamDoneResponse,
   StreamErrorResponse
 } from "../types";
+
+// Helper function to extract page citations from answer text
+function extractCitationsFromAnswer(answerText: string): number[] {
+  const pageRegex = /\(Page\s+(\d+)\)|Page\s+(\d+)/gi;
+  const citations = new Set<number>();
+  let match;
+
+  while ((match = pageRegex.exec(answerText)) !== null) {
+    const pageNumber = parseInt(match[1] || match[2], 10);
+    if (!isNaN(pageNumber)) {
+      citations.add(pageNumber);
+    }
+  }
+
+  return Array.from(citations).sort((a, b) => a - b);
+}
 
 
 // Helper function to generate content with retry logic
@@ -114,33 +131,20 @@ export async function chat(req: Request, res: Response): Promise<void> {
       )
       .join("\n\n");
 
-    const prompt = `You are a helpful assistant. Answer the user's question based *only* on the following context retrieved from a PDF document. Provide citations from the text.
-
---- CONTEXT ---
-${context}
---- END CONTEXT ---
-
-QUESTION: ${question}
-
-ANSWER:
-`;
+    const prompt = generateChatPrompt(context, question);
 
     console.log(`[${documentId}] Generating answer with Gemini (with retry)...`);
     const answer = await generateWithRetry(prompt);
 
-    // 4. Respond
-    const rawCitations: number[] = queryResponse.matches.map(
-      (match) => match.metadata!.pageNumber
-    );
-    const uniqueCitations: number[] = [...new Set(rawCitations)];
-    const sortedCitations: number[] = uniqueCitations.sort((a, b) => a - b);
+    // Extract only citations that were actually used in the answer
+    const usedCitations = extractCitationsFromAnswer(answer);
 
     const responseBody: ChatResponseBody = {
       answer,
-      citations: sortedCitations,
+      citations: usedCitations,
     };
     
-    console.log(`[${documentId}] Response generated successfully.`);
+    console.log(`[${documentId}] Response generated successfully with ${usedCitations.length} citations.`);
     res.status(200).json(responseBody);
   } catch (error: any) {
     console.error("Error in chat:", error);
@@ -199,24 +203,20 @@ export async function chatStream(req: Request, res: Response): Promise<void> {
       )
       .join("\n\n");
 
-    const prompt = `You are a helpful assistant. Answer the user's question based *only* on the following context retrieved from a PDF document. Provide citations from the text.
-
---- CONTEXT ---
-${context}
---- END CONTEXT ---
-
-QUESTION: ${question}
-
-ANSWER:
-`;
+    const prompt = generateChatPrompt(context, question);
 
     console.log(`[${documentId}] Streaming answer with Gemini (with retry)...`);
     
     // Stream the response with retry logic
     const result = await generateStreamWithRetry(prompt, res, documentId);
     
+    // Accumulate the full answer text to extract citations
+    let fullAnswerText = "";
+    
     for await (const chunk of result.stream) {
       const chunkText = chunk.text();
+      fullAnswerText += chunkText;
+      
       const chunkResponse: StreamChunkResponse = {
         type: "chunk",
         text: chunkText,
@@ -224,20 +224,16 @@ ANSWER:
       res.write(`data: ${JSON.stringify(chunkResponse)}\n\n`);
     }
 
-    // Send citations after streaming is complete
-    const rawCitations: number[] = queryResponse.matches.map(
-      (match) => match.metadata!.pageNumber
-    );
-    const uniqueCitations: number[] = [...new Set(rawCitations)];
-    const sortedCitations: number[] = uniqueCitations.sort((a, b) => a - b);
+    // Extract only citations that were actually used in the answer
+    const usedCitations = extractCitationsFromAnswer(fullAnswerText);
 
     const doneResponse: StreamDoneResponse = {
       type: "done",
-      citations: sortedCitations,
+      citations: usedCitations,
     };
     res.write(`data: ${JSON.stringify(doneResponse)}\n\n`);
     
-    console.log(`[${documentId}] Streaming complete.`);
+    console.log(`[${documentId}] Streaming complete with ${usedCitations.length} citations.`);
     res.end();
   } catch (error: any) {
     console.error("Error in chatStream:", error);

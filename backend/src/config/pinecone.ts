@@ -12,13 +12,13 @@ const pinecone = new Pinecone({
   apiKey: PINECONE_API_KEY,
 });
 
-// Define an interface for our vector metadata
+// Interface for our vector metadata
 export interface PineconeMetadata extends RecordMetadata {
   documentId: string;
   text: string;
   pageNumber: number;
 }
 
-// Export the index, typed with our metadata interface
+// Export the index, typed with metadata interface
 export const pineconeIndex = pinecone.Index<PineconeMetadata>(PINECONE_INDEX);
 

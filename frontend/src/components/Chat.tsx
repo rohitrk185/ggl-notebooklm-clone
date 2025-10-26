@@ -335,6 +335,12 @@ export default function Chat({ documentId, onCitationClick }: Props) {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e as any);
+              }
+            }}
             placeholder="Ask a question about your PDF..."
             disabled={isLoading}
           />
